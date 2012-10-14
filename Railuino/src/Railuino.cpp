@@ -6,7 +6,7 @@
  * TODO: Add proper license text here.
  */
 
-#include "railuino.h"
+#include "Railuino.h"
 #include "can/mcp2515.h"
 #include "can/mcp2515.c"
 #include "ir/infrared.c"
