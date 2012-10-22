@@ -13,7 +13,7 @@ const word TIME = 1000;
 TrackReporter rprt(16);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   Serial.println("01 02 03 04 05 06 07 08 09 10 11 12 13 14 15 16");
   Serial.println("-- -- -- -- -- -- -- -- -- -- -- -- -- -- -- --");
 }

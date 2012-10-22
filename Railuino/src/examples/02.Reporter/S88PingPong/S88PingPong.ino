@@ -14,7 +14,7 @@ const word PONG = 2;
 TrackReporter rprt(16);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 }
 
 void waitForContact(int i) {

@@ -52,7 +52,7 @@ uint8_t spi_putc( uint8_t data )
 }
 
 // -------------------------------------------------------------------------
-void mcp2515_write_register( uint8_t adress, uint8_t data )
+void can_write_register( uint8_t adress, uint8_t data )
 {
 	RESET(MCP2515_CS);
 	
@@ -64,7 +64,7 @@ void mcp2515_write_register( uint8_t adress, uint8_t data )
 }
 
 // -------------------------------------------------------------------------
-uint8_t mcp2515_read_register(uint8_t adress)
+uint8_t can_read_register(uint8_t adress)
 {
 	uint8_t data;
 	
@@ -81,7 +81,7 @@ uint8_t mcp2515_read_register(uint8_t adress)
 }
 
 // -------------------------------------------------------------------------
-void mcp2515_bit_modify(uint8_t adress, uint8_t mask, uint8_t data)
+void can_bit_modify(uint8_t adress, uint8_t mask, uint8_t data)
 {
 	RESET(MCP2515_CS);
 	
@@ -94,7 +94,7 @@ void mcp2515_bit_modify(uint8_t adress, uint8_t mask, uint8_t data)
 }
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_read_status(uint8_t type)
+uint8_t can_read_status(uint8_t type)
 {
 	uint8_t data;
 	
@@ -109,7 +109,7 @@ uint8_t mcp2515_read_status(uint8_t type)
 }
 
 // -------------------------------------------------------------------------
-uint8_t mcp2515_init(uint8_t speed)
+uint8_t can_init(uint8_t speed, bool loopback)
 {
 		
 	
@@ -156,49 +156,62 @@ uint8_t mcp2515_init(uint8_t speed)
 */	
 	spi_putc((1<<PHSEG21));		// Bitrate 250 kbps at 16 MHz
 	spi_putc((1<<BTLMODE)|(1<<PHSEG11));
+	spi_putc((1<<BRP1)|(1<<BRP0));
+
+//	spi_putc(0x03);
+//	spi_putc(0xac);
+//	spi_putc(0x81);
+
 	// spi_putc(1<<BRP0);
-    spi_putc(speed);
+
+//    spi_putc(speed);
 
 	// activate interrupts
 	spi_putc((1<<RX1IE)|(1<<RX0IE));
 	SET(MCP2515_CS);
 	
 	// test if we could read back the value => is the chip accessible?
-	if (mcp2515_read_register(CNF1) != speed) {
+	if (can_read_register(CNF1) != 3) {
+
+		Serial.println(can_read_register(CNF1), HEX);
+
 		SET(LED2_HIGH);
 
 		return false;
 	}
 	
 	// deaktivate the RXnBF Pins (High Impedance State)
-	mcp2515_write_register(BFPCTRL, 0);
+	can_write_register(BFPCTRL, 0);
 	
 	// set TXnRTS as inputs
-	mcp2515_write_register(TXRTSCTRL, 0);
+	can_write_register(TXRTSCTRL, 0);
 	
 	// turn off filters => receive any message
-	mcp2515_write_register(RXB0CTRL, (1<<RXM1)|(1<<RXM0));
-	mcp2515_write_register(RXB1CTRL, (1<<RXM1)|(1<<RXM0));
+	can_write_register(RXB0CTRL, (1<<RXM1)|(1<<RXM0));
+	can_write_register(RXB1CTRL, (1<<RXM1)|(1<<RXM0));
 	
 	// reset device to normal mode
-	mcp2515_write_register(CANCTRL, 0);
+	can_write_register(CANCTRL, loopback ? 64 : 0);
 //	SET(LED2_HIGH);
+
+
+
 	return true;
 }
 
 // ----------------------------------------------------------------------------
 // check if there are any new messages waiting
 
-uint8_t mcp2515_check_message(void) {
+uint8_t can_check_message(void) {
 	return (!IS_SET(MCP2515_INT));
 }
 
 // ----------------------------------------------------------------------------
 // check if there is a free buffer to send messages
 
-uint8_t mcp2515_check_free_buffer(void)
+uint8_t can_check_free_buffer(void)
 {
-	uint8_t status = mcp2515_read_status(SPI_READ_STATUS);
+	uint8_t status = can_read_status(SPI_READ_STATUS);
 	
 	if ((status & 0x54) == 0x54) {
 		// all buffers used
@@ -209,10 +222,10 @@ uint8_t mcp2515_check_free_buffer(void)
 }
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_get_message(tCAN *message)
+uint8_t can_get_message(tCAN *message)
 {
 	// read status
-	uint8_t status = mcp2515_read_status(SPI_RX_STATUS);
+	uint8_t status = can_read_status(SPI_RX_STATUS);
 	uint8_t addr;
 	uint8_t t;
 	if (bit_is_set(status,6)) {
@@ -231,26 +244,35 @@ uint8_t mcp2515_get_message(tCAN *message)
 	RESET(MCP2515_CS);
 	spi_putc(addr);
 	
-        uint32_t id1 = spi_putc(0xff);
-        uint32_t id2 = spi_putc(0xff);
-        uint32_t id3 = spi_putc(0xff);
-        uint32_t id4 = spi_putc(0xff);
+    uint32_t id1 = spi_putc(0xff);
+    uint32_t id2 = spi_putc(0xff);
+    uint32_t id3 = spi_putc(0xff);
+    uint32_t id4 = spi_putc(0xff);
+
+    /*
+    Serial.println("--- ID ---");
+    Serial.println(id1, HEX);
+    Serial.println(id2, HEX);
+    Serial.println(id3, HEX);
+    Serial.println(id4, HEX);
+    */
+
+    message->flags.extended = bit_is_set(id2, 3) ? 1 : 0;
 
 	// read id
-	message->id  = id1 << 3;
-	message->id |=            id2 >> 5;
-	
-	message->eid =  (id2 << 16) & 0x30000;
-        message->eid |= (id3 << 8 ) & 0x0ff00;
-        message->eid |= (id4      ) & 0x000ff;
+	message->id  = id1 << 21;
+	message->id |= (((id2 & 0xE0) >> 3) | (id2 & 0x03)) << 16;
+    message->id |= id3 << 8;
+    message->id |= id4;
 
-        message->header.ide = bit_is_set(id2, 3) ? 1 : 0;	
+    // message->id = (id1 << 24) | (id2 << 16 | id3 << 8 | id4;
+
 
 	// read DLC
 	uint8_t length = spi_putc(0xff) & 0x0f;
 	
-	message->header.length = length;
-	message->header.rtr = (bit_is_set(status, 3)) ? 1 : 0;
+	message->length = length;
+	message->flags.rtr = (bit_is_set(status, 3)) ? 1 : 0;
 	
 	// read data
 	for (t=0;t<length;t++) {
@@ -260,19 +282,19 @@ uint8_t mcp2515_get_message(tCAN *message)
 	
 	// clear interrupt flag
 	if (bit_is_set(status, 6)) {
-		mcp2515_bit_modify(CANINTF, (1<<RX0IF), 0);
+		can_bit_modify(CANINTF, (1<<RX0IF), 0);
 	}
 	else {
-		mcp2515_bit_modify(CANINTF, (1<<RX1IF), 0);
+		can_bit_modify(CANINTF, (1<<RX1IF), 0);
 	}
 	
 	return (status & 0x07) + 1;
 }
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_send_message(tCAN *message)
+uint8_t can_send_message(tCAN *message)
 {
-	uint8_t status = mcp2515_read_status(SPI_READ_STATUS);
+	uint8_t status = can_read_status(SPI_READ_STATUS);
 	
 	/* Statusbyte:
 	 *
@@ -301,16 +323,16 @@ uint8_t mcp2515_send_message(tCAN *message)
 	RESET(MCP2515_CS);
 	spi_putc(SPI_WRITE_TX | address);
 	
-        uint8_t id1 = message->id >> 3;
-        uint8_t id2 = message->id << 5;
+        uint32_t id1 = message->id >> 21;
 
-        if (message->header.ide) {
-          id2 |= 0x08;
-          id2 |= message->eid >> 16;
+        uint32_t id2 = ((message->id >> 13) & 0xE0) | ((message->id >> 16) & 0x03);
+
+        if (message->flags.extended) {
+            id2 |= 0x08;
         }
 
-        uint8_t id3 = message->eid >> 8;
-        uint8_t id4 = message->eid;
+        uint32_t id3 = message->id >> 8;
+        uint32_t id4 = message->id;
 
 	spi_putc(id1); // 3
     spi_putc(id2); // 5
@@ -318,9 +340,9 @@ uint8_t mcp2515_send_message(tCAN *message)
 	spi_putc(id3);
 	spi_putc(id4);
 	
-	uint8_t length = message->header.length & 0x0f;
+	uint8_t length = message->length & 0x0f;
 	
-	if (message->header.rtr) {
+	if (message->flags.rtr) {
 		// a rtr-frame has a length, but contains no data
 		spi_putc((1<<RTR) | length);
 	}

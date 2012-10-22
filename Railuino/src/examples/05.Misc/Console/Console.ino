@@ -55,7 +55,7 @@ int input(String message, int low, int high) {
 }
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ctrl.begin();
 
   for (int i = 0; i < 20; i++) {

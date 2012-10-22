@@ -16,7 +16,7 @@ const boolean DEBUG = true;
 TrackController ctrl(0xdf24, DEBUG);
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   
   Serial.println("Power on");
   ctrl.setPower(true);

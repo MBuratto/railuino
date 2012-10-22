@@ -21,7 +21,7 @@ word numOfArguments;
 boolean result;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ctrl.begin();
   Serial.println("100 Ready");
 }

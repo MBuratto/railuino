@@ -6,7 +6,9 @@
  * TODO: Add proper license text here.
  */
 
+//#include <can.h>
 #include "Railuino.h"
+//#include "canbus/canbus.c"
 #include "can/mcp2515.h"
 #include "can/mcp2515.c"
 #include "ir/infrared.c"
@@ -20,22 +22,71 @@ void printHex(byte b) {
 	Serial.print(" ");
 }
 
+#define SIZE 32
+
+#define ulong unsigned long
+
+can_t buffer[SIZE];
+
+volatile int posRead = 0;
+
+volatile int posWrite = 0;
+
+volatile bool lastOpWasWrite = false;
+
+void enqueue() {
+	if (posWrite == posRead && lastOpWasWrite) {
+		Serial.println("!!! Buffer full");
+		return;
+	}
+
+	if (can_get_message(&buffer[posWrite])) {
+		posWrite = (posWrite + 1) % SIZE;
+	} else {
+		Serial.println("!!! No message");
+	}
+
+	lastOpWasWrite = true;
+}
+
+bool dequeue(can_t *p) {
+	if (posWrite == posRead && !lastOpWasWrite) {
+		return false;
+	}
+
+	noInterrupts();
+
+	memcpy(p, &buffer[posRead], sizeof(can_t));
+	posRead = (posRead + 1) % SIZE;
+	lastOpWasWrite = false;
+	interrupts();
+
+	return true;
+}
+
 // ===================================================================
 // === TrackController ===============================================
 // ===================================================================
 
+TrackController::TrackController(int hash, bool debug, bool loopback) {
+	mHash = hash;
+	mDebug = debug;
+	mLoopback = loopback;
+}
+
 TrackController::TrackController(int hash, bool debug) {
-	if (!mcp2515_init(3)) {
+	TrackController(hash, debug, false);
+}
+
+void TrackController::begin() {
+	if (!can_init(5, mLoopback)) {
 		Serial.println("!!! Init error");
 		Serial.println("!!! Emergency stop");
 		for (;;);
 	}
 
-	mHash = hash;
-	mDebug = debug;
-}
+	attachInterrupt(0, enqueue, FALLING);
 
-void TrackController::begin() {
 	TrackMessage message;
 
 	clearMessage(&message);
@@ -47,15 +98,16 @@ void TrackController::begin() {
 	sendMessage(&message);
 }
 
+// end - no interrupts
+
 boolean TrackController::sendMessage(TrackMessage *message) {
-	tCAN can;
+	can_t can;
 
 	message->hash = mHash;
 	
-	can.id = message->command >> 1;
-	can.eid = (((long) (message->command & 0x01)) << 17) | message->hash;
-	can.header.ide = 1;
-	can.header.length = message->length;
+	can.id = ((uint32_t)message->command) << 17 | (uint32_t)message->hash;
+	can.flags.extended = 1;
+	can.length = message->length;
 
 	for (int i = 0; i < message->length; i++) {
 		can.data[i] = message->data[i];
@@ -66,41 +118,52 @@ boolean TrackController::sendMessage(TrackMessage *message) {
 	    printMessage(message);
 	}
 	
-	return mcp2515_check_free_buffer() && mcp2515_send_message(&can);
+	bool result = can_send_message(&can);
+
+	/*
+	Serial.println(can_read_register(0x1c), HEX);
+	Serial.println(can_read_register(0x1d), HEX);
+	Serial.println(can_read_register(0x2d), HEX);
+*/
+
+	return result;
 }
 
 boolean TrackController::receiveMessage(TrackMessage *message) {
-	tCAN can;
+	can_t can;
 
-	boolean result = mcp2515_get_message(&can);
+	bool result = dequeue(&can);
 
 	if (result) {
-		/*
+
+
+//	boolean result = /* can_check_message() && */ can_get_message(&can);
+
+//	if (result) {
+        /*
 		if (mDebug) {
 			
 			Serial.print("ID :");
 			Serial.println(can.id, HEX);
-			Serial.print("EID:");
-			Serial.println(can.eid, HEX);
 			Serial.print("EXIDE:");
-			Serial.println(can.header.ide, HEX);
+			Serial.println(can.flags.extended, HEX);
 			Serial.print("DLC:");
-			Serial.println(can.header.length, HEX);
+			Serial.println(can.length, HEX);
 			Serial.print("DATA:");
 
-			for (int i = 0; i < can.header.length; i++) {
+			for (int i = 0; i < can.length; i++) {
 				printHex(can.data[i]);
 			}
 			
 			Serial.println();
 		}
-		*/
-		message->command = ((can.id << 1) | (can.eid >> 17)) & 0xff;
-		message->hash = (word)can.eid & 0xffff;
-		message->response = bitRead(can.eid, 16);
-		message->length = can.header.length;
+        */
+		message->command = (can.id >> 17) & 0xff;
+		message->hash = can.id & 0xffff;
+		message->response = bitRead(can.id, 16);
+		message->length = can.length;
 
-		for (int i = 0; i < can.header.length; i++) {
+		for (int i = 0; i < can.length; i++) {
 			message->data[i] = can.data[i];
 		}
 
@@ -114,7 +177,7 @@ boolean TrackController::receiveMessage(TrackMessage *message) {
 }
 
 boolean TrackController::exchangeMessage(TrackMessage *message, word timeout) {
-	word time = 0;
+	ulong time = millis();
 
 	byte command = message->command;
 	
@@ -127,16 +190,15 @@ boolean TrackController::exchangeMessage(TrackMessage *message, word timeout) {
 		}
 	}
 
-	while (time <= timeout) {
-		clearMessage(message);
-		boolean result = receiveMessage(message);
+	TrackMessage response;
 
-		if (result && message->command == command && message->response) {
+	while (millis() < time + 5000) {
+		clearMessage(&response);
+		boolean result = receiveMessage(&response);
+
+		if (result && response.command == command /* && message->response */) {
 			return true;
 		}
-
-		delay(20);
-		time += 20;
 	}
 
 	if (mDebug) {
@@ -148,8 +210,9 @@ boolean TrackController::exchangeMessage(TrackMessage *message, word timeout) {
 
 void TrackController::clearMessage(TrackMessage *message) {
 	message->command = 0;
-	message->length = 0;
+	message->hash = 0;
 	message->response = false;
+	message->length = 0;
 	for (int i = 0; i < 8; i++) {
 		message->data[i] = 0;
 	}

@@ -21,7 +21,7 @@ const int RIGHT = A2;
 const int FIRE  = A4;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
   ctrl.begin();
   
   digitalWrite(A1, HIGH);

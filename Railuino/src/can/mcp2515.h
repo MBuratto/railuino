@@ -43,48 +43,49 @@ extern "C"
 // ----------------------------------------------------------------------------
 typedef struct
 {
-        uint16_t id;
-        uint32_t eid;
+	uint32_t id;				//!< ID der Nachricht (11 oder 29 Bit)
 	struct {
-                uint8_t ide : 1;
-		uint8_t rtr : 1;
-		uint8_t length : 4;
-	} header;
-	uint8_t data[8];
+		int rtr : 1;			//!< Remote-Transmit-Request-Frame?
+		int extended : 1;		//!< extended ID?
+	} flags;
+    uint8_t length;				//!< Anzahl der Datenbytes
+    uint8_t data[8];			//!< Die Daten der CAN Nachricht
 } tCAN;
+
+typedef tCAN can_t;
 
 // ----------------------------------------------------------------------------
 uint8_t spi_putc( uint8_t data );
 
 // ----------------------------------------------------------------------------
-void mcp2515_write_register( uint8_t adress, uint8_t data );
+void can_write_register( uint8_t adress, uint8_t data );
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_read_register(uint8_t adress);
+uint8_t can_read_register(uint8_t adress);
 
 // ----------------------------------------------------------------------------
-void mcp2515_bit_modify(uint8_t adress, uint8_t mask, uint8_t data);
+void can_bit_modify(uint8_t adress, uint8_t mask, uint8_t data);
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_read_status(uint8_t type);
+uint8_t can_read_status(uint8_t type);
 
 // ----------------------------------------------------------------------------
 
-uint8_t mcp2515_init(uint8_t speed);
+uint8_t can_init(uint8_t speed);
 
 // ----------------------------------------------------------------------------
 // check if there are any new messages waiting
-uint8_t mcp2515_check_message(void);
+uint8_t can_check_message(void);
 
 // ----------------------------------------------------------------------------
 // check if there is a free buffer to send messages
-uint8_t mcp2515_check_free_buffer(void);
+uint8_t can_check_free_buffer(void);
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_get_message(tCAN *message);
+uint8_t can_get_message(tCAN *message);
 
 // ----------------------------------------------------------------------------
-uint8_t mcp2515_send_message(tCAN *message);
+uint8_t can_send_message(tCAN *message);
 
 
 #ifdef __cplusplus

@@ -145,12 +145,16 @@ class TrackController {
 	
 	int mHash;
 	
+	bool mLoopback;
+
     public:
 
 	/**
 	 * Creates a new TrackController and does some initializing.
 	 */
     TrackController(int hash, bool debug);
+
+    TrackController(int hash, bool debug, bool loopback);
 
     /**
      * Sends a message and reports true on success. Internal method.

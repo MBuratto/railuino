@@ -20,7 +20,7 @@ TrackReporter rprt(2);
 word track = 1;
 
 void setup() {
-  Serial.begin(9600);
+  Serial.begin(115200);
 
   ctrl.begin();
   ctrl.setPower(true);
