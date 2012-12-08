@@ -1,38 +1,24 @@
 /*********************************************************************
- * Railuino - Hacking your Marklin
+ * Railuino - Hacking your Märklin
  *
- * (c) 2012 Joerg Pleumann
+ * Copyright (C) 2012 Joerg Pleumann
  * 
- * TODO: Add proper license text here.
- * 
- * This library allows you to control your digital Marklin railway
- * using Arduino. It can be used in two flavors:
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
  *
- * (1) As a Mobile Station 2. You can use a Sparkfun CAN shield and a
- *     cable to connect your Arduino to the Digital Connector Box of
- *     a Mobile Station 2 and probably (untested) also to a Central
- *     Station 2. This allows you to control locomotives, functions
- *     and turnouts using MM2, DCC and other protocols. You can even
- *     read and write decoder CVs, as long as the decoder's protocol
- *     supports it (DCC does both, MM2 only write, others vary).
- *
- * (2) As an infrared controller. You can use a simple infrared LED
- *     and a resistor to have your Arduino talk to the very basic IR
- *     receiver box that comes with various starter packages. This
- *     allows you to control four MM2 locomotives on fixed addresses
- *     (the classic Delta addresses). You can also control sixteen
- *     turnouts (this is an undocumented feature of the IR box, and
- *     the original Marklin IR controller doesn't support it).
- *
- * In addition to controlling things on and connected to the track
- * the library allows you to receive reports about track usage using
- * the standard S88 bus.
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * LICENSE file for more details.
  */
 
 #ifndef railuino__h
 #define railuino__h
 
 #include <Arduino.h>
+#include <Printable.h>
 
 // ===================================================================
 // === Common definitions ============================================
@@ -67,7 +53,7 @@
 #define DIR_CHANGE   3
 
 /**
- * Constants for accessory states.
+ * Constants for accessory states including some aliases.
  */
 #define ACC_OFF      0
 #define ACC_ROUND    0
@@ -92,9 +78,13 @@
  * less a beautified version of the real CAN message. You normally
  * don't need to use this unless you want to experiment with the
  * protocol or extend the library. See the Marklin protocol
- * documentation for details.
+ * documentation for details. The TrackMessage is a Printable, so
+ * it can be directly used in Serial.println(), for instance. It
+ * can also be converted from a String.
  */
-typedef struct {
+class TrackMessage : public Printable {
+
+  public:
 
   /**
    * The command number.
@@ -121,7 +111,34 @@ typedef struct {
    */
   byte data[8];
 
-} TrackMessage;
+  /**
+   * Clears the message, setting all values to zero. Provides for
+   * easy recycling of TrackMessage objects.
+   */
+  void clear();
+
+  /**
+   * Prints the message to the given Print object, which could be a
+   * Serial object, for instance. The message format looks like this
+   *
+   * HHHH R CC L DD DD DD DD DD DD DD DD
+   *
+   * with all numbers being hexadecimals and the data bytes being
+   * optional beyond what the message length specifies. Exactly one
+   * whitespace is inserted between different fields as a separator.
+   */
+  virtual size_t printTo(Print &p) const;
+
+  /**
+   * Parses the message from the given String. Returns true on
+   * success, false otherwise. The message must have exactly the
+   * format that printTo creates. This includes each and every
+   * whitespace. If the parsing fails the state of the object is
+   * undefined afterwards, and a clear() is recommended.
+   */
+  boolean parseFrom(String &s);
+
+};
 
 // ===================================================================
 // === TrackController ===============================================
@@ -132,36 +149,93 @@ typedef struct {
  * turnouts and other accessories. While there are some low-level
  * methods for dealing with messages, you will normally want to use
  * the high-level methods that wrap most of the the nasty protocol
- * details. When addressing something, you have to tell the system
- * the type of address (or decoder) you are using by adding the
- * proper protocol base address. For instance, DCC locomotive 42
- * is properly addressed as ADDR_DCC + 42.
+ * details. When addressing something, you have to tell the system the
+ * type of address (or decoder) you are using by adding the proper
+ * protocol base address. For instance, DCC locomotive 42 is properly
+ * addressed as ADDR_DCC + 42.
  */
 class TrackController {
 
     private:
+
+	/**
+	 * Stores the hash of our controller. This must not conflict with
+	 * hashes of other devices in the setup (most likely the MS2 and
+	 * the connector box).
+	 */
+	word mHash;
+
+	/**
+	 * Stores the debug flag. When debugging is on, all outgoing and
+	 * incoming messages are printed to the Serial console.
+	 */
+	boolean mDebug;
 	
-	bool mDebug;
-	
-	int mHash;
-	
-	bool mLoopback;
+	/**
+	 * Holds the loopback flag. When loopback is on, messages are
+	 * reflected by the CAN controller. No external communication
+	 * takes place. This is helpful for some test cases.
+	 */
+	boolean mLoopback;
+
+	/**
+	 * Generates a new hash and makes sure it does not conflict
+	 * with those of other devices in the setup.
+	 */
+	void generateHash();
 
     public:
 
 	/**
-	 * Creates a new TrackController and does some initializing.
+	 * Creates a new TrackController with default values. This should
+	 * be fine for most use cases. Further configuration can be done
+	 * by using the init() method.
 	 */
-    TrackController(int hash, bool debug);
+    TrackController();
 
-    TrackController(int hash, bool debug, bool loopback);
+	/**
+	 * Creates a new TrackController with the given hash and debugging
+	 * flag. A zero hash will result in a unique hash begin generated.
+	 */
+    TrackController(word hash, boolean debug);
+
+    /**
+     * Is called when a TrackController is being destroyed. Does the
+     * necessary cleanup. No need to call this manually.
+     */
+    ~TrackController();
+
+    /**
+     * Initializes the TrackController with the given values. This
+     * should be called before begin, otherwise it will not take
+     * effect. A zero hash will result in a unique hash begin
+     * generated.
+     */
+    void init(word hash, boolean debug, boolean loopback);
+
+    /**
+     * Queries the hash used by the TrackController.
+     */
+    word getHash();
+
+    /**
+     * Reflects whether the TrackController is in debug mode,
+     * where all messages are dumped to the Serial console.
+     */
+    boolean isDebug();
+
+    /**
+     * Reflects whether the TrackController is in debug mode,
+     * where all messages are reflected by the CAN controller.
+     */
+    boolean isLoopback();
 
     /**
      * Sends a message and reports true on success. Internal method.
      * Normally you don't want to use this, but the more convenient
      * methods below instead.
      */
-    boolean sendMessage(TrackMessage *message);
+    boolean sendMessage(TrackMessage &message);
 
     /**
      * Receives an arbitrary message, if available, and reports true
@@ -169,7 +243,7 @@ class TrackController {
      * don't want to use this, but the more convenient methods below
      * instead.
      */
-    boolean receiveMessage(TrackMessage *message);
+    boolean receiveMessage(TrackMessage &message);
 
     /**
      * Sends a message and waits for the corresponding response,
@@ -177,25 +251,24 @@ class TrackController {
      * the same command ID and the response marker arrives or the
      * timeout (in ms) expires. All non-matching messages are
      * skipped. Internal method. Normally you don't want to use this,
-     * but the more convenient methods below instead.
+     * but the more convenient methods below instead. 'out' and 'in'
+     * may be the same object.
      */
-    boolean exchangeMessage(TrackMessage *message, word timeout);
+    boolean exchangeMessage(TrackMessage &out, TrackMessage &in,  word timeout);
 
     /**
-     * Clears a message, setting all values to zero. Internal method.
-     * Normally you don't want to use this, but the more convenient
-     * methods below instead.
+     * Initializes the CAN hardware and starts receiving CAN
+     * messages. CAN messages are put into an internal buffer of
+     * limited size, so they don't get lost, but you have to take
+     * care of them in time. Otherwise the buffer might overflow.
      */
-    void clearMessage(TrackMessage *message);
-
-    /**
-     * Dumps the given message to the serial console if debuggin is
-     * enabled. Internal method. Normally you don't want to use this,
-     * but the more convenient methods below instead.
-     */
-    void printMessage(TrackMessage *message);
-
     void begin();
+
+    /**
+     * Stops receiving messages from the CAN hardware. Clears
+     * the internal buffer.
+     */
+    void end();
 
     /**
      * Controls power on the track. When passing false, all
@@ -205,7 +278,7 @@ class TrackController {
      * stopped mode in order to avoid accidents. The return value
      * reflects whether the call was successful.
      */
-    boolean setPower(bool power);
+    boolean setPower(boolean power);
     
     /**
      * Sets the direction of the given locomotive. Valid directions
@@ -215,15 +288,16 @@ class TrackController {
     boolean setLocoDirection(word address, byte direction);
 
     /**
-     * Toggles the direction of the given locomotove. This normally
+     * Toggles the direction of the given locomotive. This normally
      * includes a full stop.
      */
     boolean toggleLocoDirection(word address);
     
     /**
      * Sets the speed of the given locomotive. Valid speeds are
-     * 0 to 1023 (inclusive).  The return value reflects whether
-     * the call was successful.
+     * 0 to 1023 (inclusive), though the connector box will limit
+     * all speeds beyond 1000 to 1000. The return value reflects
+     * whether the call was successful.
      */
     boolean setLocoSpeed(word address, word speed);
 
@@ -339,36 +413,23 @@ class TrackController {
  * numbered 1 to 4, and sixteen turnouts, numbered 1 to 16. The IR
  * controller does not care about protocols, although in reality
  * it's all MM2. Also, no object-oriented mumbo-jumbo here to
- * accomodate for the limited Arduino resources. Note this class
- * is stateless, so the caller has to keep track of things, if
- * necessary.
+ * accomodate for the limited Arduino resources. Note that with
+ * the exception of remembering power this class is stateless,
+ * so the caller has to keep track of things, if necessary.
  */
 class TrackControllerInfrared {
 
     private:
 	
-	bool mDebug;
-	
-	word mToggle;
-	
+	/**
+	 * Whether the power is on.
+	 */
 	boolean mPower;
 	
 	/**
-	 * Information about our four locomotives. One word per
-	 * loco. The bits are:
-	 * 
-	 * 0..3 speed     (0 to 14)
-	 *    4 direction (1 = backward)
-	 *    5 light     (1 = on, actually function zero)
-	 * 6..9 functions (1 = on)
+	 * The current value of the toggle bit (needed for RC5).
 	 */
-	word mLocoInfo[4];
-	
-	/**
-	 * Information about the turnouts, in order of bits.
-	 * (1 = straight).
-	 */
-	word mTurnoutInfo;
+	word mToggle;
 	
     public:
 
@@ -376,7 +437,7 @@ class TrackControllerInfrared {
 	 * Creates a new TrackControllerInfrared and does some
 	 * initializing.
 	 */
-    TrackControllerInfrared(bool debug);
+    TrackControllerInfrared();
 
     /**
      * Sends a message consisting of address and command (in the

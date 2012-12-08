@@ -5,7 +5,7 @@
 // ===================================================================
 
 /**
- * This is taken more or less verbatim from Ken Shiriff's awesome IR
+ * This is taken more or less verbatim from Ken Shirriff's awesome IR
  * library.
  *
  * http://www.arcfn.com/2009/08/multi-protocol-infrared-remote-library.html
