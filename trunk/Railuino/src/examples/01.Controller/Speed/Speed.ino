@@ -1,9 +1,17 @@
-/*************************************************
+/*********************************************************************
  * Railuino - Hacking your Märklin
  *
- * (c) 2012 Joerg Pleumann
+ * Copyright (C) 2012 Joerg Pleumann
+ * 
+ * This example is free software; you can redistribute it and/or
+ * modify it under the terms of the Creative Commons Zero License
+ * as published by the Creative Commons Organisation, version 1.0.
+ * This effectively puts the file into the public domain.
  *
- * TODO: Add proper license text here.
+ * This example is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * LICENSE file for more details.
  */
 
 #include <Railuino.h>
@@ -17,6 +25,7 @@ TrackController ctrl(0xdf24, DEBUG);
 
 void setup() {
   Serial.begin(115200);
+  ctrl.begin();
   
   Serial.println("Power on");
   ctrl.setPower(true);

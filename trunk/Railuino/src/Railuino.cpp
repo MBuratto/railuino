@@ -1,138 +1,323 @@
 /*********************************************************************
- * Railuino - Hacking your Marklin
+ * Railuino - Hacking your Märklin
  *
- * (c) 2012 Joerg Pleumann
+ * Copyright (C) 2012 Joerg Pleumann
  * 
- * TODO: Add proper license text here.
+ * This library is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU Lesser General Public
+ * License as published by the Free Software Foundation; either
+ * version 2.1 of the License, or (at your option) any later version.
+ *
+ * This library is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * LICENSE file for more details.
  */
 
-//#include <can.h>
+// #include <can.h>
 #include "Railuino.h"
-//#include "canbus/canbus.c"
+// #include "canbus/canbus.c"
 #include "can/mcp2515.h"
 #include "can/mcp2515.c"
 #include "ir/infrared.c"
 
-void printHex(byte b) {
-	Serial.print("0x");
-	if (b < 0x10) {
-		Serial.print("0");
-	}
-	Serial.print(b, HEX);
-	Serial.print(" ");
+size_t printHex(Print &p, unsigned long hex, int digits) {
+    size_t size = 0;
+
+    String s = String(hex, HEX);
+
+    for (int i = s.length(); i < digits; i++) {
+        size += p.print("0");
+    }
+
+    size += p.print(s);
+
+    return size;
+}
+
+int parseHex(String &s, int start, int end, boolean *ok) {
+    int value = 0;
+
+    for (int i = start; i < end; i++) {
+    	char c = s.charAt(i);
+
+        if (c >= '0' && c <= '9') {
+            value = 16 * value + c - '0';
+        } else if (c >= 'a' && c <= 'f') {
+            value = 16 * value + 10 + c - 'a';
+        } else if (c >= 'A' && c <= 'F') {
+            value = 16 * value + 10 + c - 'A';
+        } else {
+        	ok = false;
+            return -1;
+        }
+    }
+
+    return value;
 }
 
 #define SIZE 32
 
 #define ulong unsigned long
 
-can_t buffer[SIZE];
+can_t _buffer[SIZE];
 
 volatile int posRead = 0;
 
 volatile int posWrite = 0;
 
-volatile bool lastOpWasWrite = false;
+volatile boolean lastOpWasWrite = false;
 
 void enqueue() {
 	if (posWrite == posRead && lastOpWasWrite) {
-		Serial.println("!!! Buffer full");
+		// Serial.println("!!! Buffer full");
 		return;
 	}
 
-	if (can_get_message(&buffer[posWrite])) {
+	if (can_get_message(&_buffer[posWrite])) {
 		posWrite = (posWrite + 1) % SIZE;
 	} else {
-		Serial.println("!!! No message");
+		// Serial.println("!!! No message");
 	}
 
 	lastOpWasWrite = true;
 }
 
-bool dequeue(can_t *p) {
+boolean dequeue(can_t *p) {
+	noInterrupts();
+
 	if (posWrite == posRead && !lastOpWasWrite) {
+		interrupts();
 		return false;
 	}
 
-	noInterrupts();
+	memcpy(p, &_buffer[posRead], sizeof(can_t));
+/*
+	p->id=_buffer[posRead].id;
+	p->length=_buffer[posRead].length;
 
-	memcpy(p, &buffer[posRead], sizeof(can_t));
+	for (int i = 0; i < p->length; i++) {
+		p->data[i] = _buffer[posRead].data[i];
+	}
+*/
+	//*p = _buffer[posRead];
+
 	posRead = (posRead + 1) % SIZE;
 	lastOpWasWrite = false;
+
 	interrupts();
 
 	return true;
 }
 
 // ===================================================================
+// === TrackMessage ==================================================
+// ===================================================================
+
+void TrackMessage::clear() {
+	command = 0;
+	hash = 0;
+	response = false;
+	length = 0;
+	for (int i = 0; i < 8; i++) {
+		data[i] = 0;
+	}
+}
+
+size_t TrackMessage::printTo(Print& p) const {
+    size_t size = 0;
+
+    size += printHex(p, hash, 4);
+    size += p.print(response ? " R " : "   ");
+    size += printHex(p, command, 2);
+    size += p.print(" ");
+    size += printHex(p, length, 1);
+
+    for (int i = 0; i < length; i++) {
+        size += p.print(" ");
+        size += printHex(p, data[i], 2);
+    }
+
+    return size;
+}
+
+boolean TrackMessage::parseFrom(String &s) {
+	boolean result = true;
+
+	clear();
+
+	if (s.length() < 11) {
+		return false;
+	}
+
+	hash = parseHex(s, 0, 4, &result);
+	response = s.charAt(5) != ' ';
+	command = parseHex(s, 7, 9, &result);
+	length = parseHex(s, 10, 11, &result);
+
+	if (length > 8) {
+		return false;
+	}
+
+	if (s.length() < 11 + 3 * length) {
+		return false;
+	}
+
+	for (int i = 0; i < length; i++) {
+		data[i] = parseHex(s, 12 + 3 * i, 12 + 3 * i + 2, &result);
+	}
+
+	return result;
+}
+
+// ===================================================================
 // === TrackController ===============================================
 // ===================================================================
 
-TrackController::TrackController(int hash, bool debug, bool loopback) {
+TrackController::TrackController() {
+	if (mDebug) {
+		Serial.println(F("### Creating controller"));
+	}
+
+	init(0, false, false);
+}
+
+TrackController::TrackController(word hash, boolean debug) {
+	if (mDebug) {
+		Serial.println(F("### Creating controller"));
+	}
+
+	init(hash, debug, false);
+}
+
+TrackController::~TrackController() {
+	if (mDebug) {
+		Serial.println(F("### Destroying controller"));
+	}
+
+	end();
+}
+
+void TrackController::init(word hash, boolean debug, boolean loopback) {
 	mHash = hash;
 	mDebug = debug;
 	mLoopback = loopback;
 }
 
-TrackController::TrackController(int hash, bool debug) {
-	TrackController(hash, debug, false);
+word TrackController::getHash() {
+	return mHash;
+}
+
+boolean TrackController::isDebug() {
+	return mDebug;
+}
+
+boolean TrackController::isLoopback() {
+	return mLoopback;
 }
 
 void TrackController::begin() {
+	attachInterrupt(0, enqueue, LOW);
+
 	if (!can_init(5, mLoopback)) {
-		Serial.println("!!! Init error");
-		Serial.println("!!! Emergency stop");
+		Serial.println(F("!!! Init error"));
+		Serial.println(F("!!! Emergency stop"));
 		for (;;);
 	}
 
-	attachInterrupt(0, enqueue, FALLING);
+	delay(500);
 
+	if (!mLoopback) {
+		TrackMessage message;
+
+		message.clear();
+		message.command = 0x1b;
+		message.length = 0x05;
+		message.data[4] = 0x11;
+
+		sendMessage(message);
+	}
+
+	if (mHash == 0) {
+		generateHash();
+	}
+
+}
+
+void TrackController::generateHash() {
 	TrackMessage message;
 
-	clearMessage(&message);
+	boolean ok = false;
 
-	message.command = 0x1b;
-	message.length = 0x05;
-	message.data[4] = 0x11;
+	while(!ok) {
+		mHash = random(0x10000) & 0xff7f | 0x0300;
 
-	sendMessage(&message);
+		if (mDebug) {
+			Serial.print(F("### Trying new hash "));
+			printHex(Serial, mHash, 4);
+			Serial.println();
+		}
+
+		message.clear();
+		message.command = 0x18;
+
+		sendMessage(message);
+
+		delay(500);
+
+		ok = true;
+		while(receiveMessage(message)) {
+			if (message.hash == mHash) {
+				ok = false;
+			}
+		}
+	}
+
+	if (mDebug) {
+        Serial.println(F("### New hash looks good"));
+	}
 }
 
 // end - no interrupts
 
-boolean TrackController::sendMessage(TrackMessage *message) {
+void TrackController::end() {
+	detachInterrupt(0);
+
+	can_t t;
+
+	boolean b = dequeue(&t);
+	while (b) {
+		b = dequeue(&t);
+	}
+}
+
+boolean TrackController::sendMessage(TrackMessage &message) {
 	can_t can;
 
-	message->hash = mHash;
+	message.hash = mHash;
 	
-	can.id = ((uint32_t)message->command) << 17 | (uint32_t)message->hash;
+	can.id = ((uint32_t)message.command) << 17 | (uint32_t)message.hash;
 	can.flags.extended = 1;
-	can.length = message->length;
+	can.flags.rtr = 0;
+	can.length = message.length;
 
-	for (int i = 0; i < message->length; i++) {
-		can.data[i] = message->data[i];
+	for (int i = 0; i < message.length; i++) {
+		can.data[i] = message.data[i];
 	}
 
 	if (mDebug) {
-	   Serial.print("==> ");
-	    printMessage(message);
+	    Serial.print("==> ");
+	    Serial.println(message);
 	}
 	
-	bool result = can_send_message(&can);
-
-	/*
-	Serial.println(can_read_register(0x1c), HEX);
-	Serial.println(can_read_register(0x1d), HEX);
-	Serial.println(can_read_register(0x2d), HEX);
-*/
-
-	return result;
+	return can_send_message(&can);
 }
 
-boolean TrackController::receiveMessage(TrackMessage *message) {
+boolean TrackController::receiveMessage(TrackMessage &message) {
 	can_t can;
 
-	bool result = dequeue(&can);
+	boolean result = dequeue(&can);
+//	boolean result = /* can_check_message() && */ can_get_message(&can);
 
 	if (result) {
 
@@ -158,116 +343,106 @@ boolean TrackController::receiveMessage(TrackMessage *message) {
 			Serial.println();
 		}
         */
-		message->command = (can.id >> 17) & 0xff;
-		message->hash = can.id & 0xffff;
-		message->response = bitRead(can.id, 16);
-		message->length = can.length;
+		message.clear();
+		message.command = (can.id >> 17) & 0xff;
+		message.hash = can.id & 0xffff;
+		message.response = bitRead(can.id, 16) || mLoopback;
+		message.length = can.length;
 
 		for (int i = 0; i < can.length; i++) {
-			message->data[i] = can.data[i];
+			message.data[i] = can.data[i];
 		}
 
 		if (mDebug) {
 		    Serial.print("<== ");
-		    printMessage(message);
+		    Serial.println(message);
 		}
 	}
 
 	return result;
 }
 
-boolean TrackController::exchangeMessage(TrackMessage *message, word timeout) {
-	ulong time = millis();
+boolean TrackController::exchangeMessage(TrackMessage &out, TrackMessage &in, word timeout) {
+	int command = out.command;
 
-	byte command = message->command;
-	
-	if (!sendMessage(message)) {
+	if (!sendMessage(out)) {
 		if (mDebug) {
-			Serial.println("!!! Send error");
-			Serial.println("!!! Emergency stop");
+			Serial.println(F("!!! Send error"));
+			Serial.println(F("!!! Emergency stop"));
 			setPower(false);
 			for (;;);
 		}
 	}
 
-	TrackMessage response;
+	ulong time = millis();
 
-	while (millis() < time + 5000) {
-		clearMessage(&response);
-		boolean result = receiveMessage(&response);
+	// TrackMessage response;
 
-		if (result && response.command == command /* && message->response */) {
+	while (millis() < time + timeout) {
+		in.clear();
+		boolean result = receiveMessage(in);
+
+		if (result && in.command == command && in.response) {
 			return true;
 		}
 	}
 
 	if (mDebug) {
-		Serial.println("!!! Receive timeout");
+		Serial.println(F("!!! Receive timeout"));
 	}
 	
 	return false;
 }
 
-void TrackController::clearMessage(TrackMessage *message) {
-	message->command = 0;
-	message->hash = 0;
-	message->response = false;
-	message->length = 0;
-	for (int i = 0; i < 8; i++) {
-		message->data[i] = 0;
-	}
-}
-
-void TrackController::printMessage(TrackMessage *message) {
-	printHex(message->command);
-	
-	Serial.print(message->response ? "R " : "  ");
-	
-	printHex(highByte(message->hash));
-	printHex(lowByte(message->hash));
-	printHex(message->length);
-
-	for (int i = 0; i < message->length; i++) {
-		printHex(message->data[i]);
-	}
-	
-	Serial.println();
-}
-
-boolean TrackController::setPower(bool power) {
+boolean TrackController::setPower(boolean power) {
 	TrackMessage message;
 
-	clearMessage(&message);
+	if (power) {
+		message.clear();
+		message.command = 0x00;
+		message.length = 0x07;
+		message.data[4] = 9;
+		message.data[6] = 0xD;
 
+		exchangeMessage(message, message, 1000);
+
+		message.clear();
+		message.command = 0x00;
+		message.length = 0x06;
+		message.data[4] = 8;
+		message.data[5] = 7;
+
+		exchangeMessage(message, message, 1000);
+	}
+
+	message.clear();
 	message.command = 0x00;
 	message.length = 0x05;
 	message.data[4] = power ? 0x01 : 0x00;
 
-	return exchangeMessage(&message, 1000);
+	return exchangeMessage(message, message, 1000);
 }
 
 boolean TrackController::setLocoDirection(word address, byte direction) {
 	TrackMessage message;
 
-	clearMessage(&message);
-/*
+    message.clear();
 	message.command = 0x00;
 	message.length = 0x05;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 	message.data[4] = 0x03;
 
-	exchangeMessage(&message, 1000);
+	exchangeMessage(message, message, 1000);
 	
-	clearMessage(&message);
-*/	
+	message.clear();
 	message.command = 0x05;
 	message.length = 0x05;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 	message.data[4] = direction;
 
-	return exchangeMessage(&message, 1000);
+	return exchangeMessage(message, message, 1000);
 }
 
 boolean TrackController::toggleLocoDirection(word address) {
@@ -277,8 +452,7 @@ boolean TrackController::toggleLocoDirection(word address) {
 boolean TrackController::setLocoSpeed(word address, word speed) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x04;
 	message.length = 0x06;
 	message.data[2] = highByte(address);
@@ -286,14 +460,14 @@ boolean TrackController::setLocoSpeed(word address, word speed) {
 	message.data[4] = highByte(speed);
 	message.data[5] = lowByte(speed);
 
-	return exchangeMessage(&message, 1000);
+	return exchangeMessage(message, message, 1000);
 }
 
 boolean TrackController::accelerateLoco(word address) {
 	word speed;
 	
 	if (getLocoSpeed(address, &speed)) {
-		speed += 1024/14;
+		speed += 77;
 		if (speed > 1023) {
 			speed = 1023;
 		}
@@ -308,7 +482,7 @@ boolean TrackController::decelerateLoco(word address) {
 	word speed;
 	
 	if (getLocoSpeed(address, &speed)) {
-		speed -= 1024/14;
+		speed -= 77;
 		if (speed > 32767) {
 			speed = 0;
 		}
@@ -322,8 +496,7 @@ boolean TrackController::decelerateLoco(word address) {
 boolean TrackController::setLocoFunction(word address, byte function, byte power) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x06;
 	message.length = 0x06;
 	message.data[2] = highByte(address);
@@ -331,7 +504,7 @@ boolean TrackController::setLocoFunction(word address, byte function, byte power
 	message.data[4] = function;
 	message.data[5] = power;
 
-	return exchangeMessage(&message, 1000);
+	return exchangeMessage(message, message, 1000);
 }
 
 boolean TrackController::toggleLocoFunction(word address, byte function) {
@@ -347,8 +520,7 @@ boolean TrackController::setAccessory(word address, byte position, byte power,
 		word time) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x0b;
 	message.length = 0x06;
 	message.data[2] = highByte(address);
@@ -356,58 +528,55 @@ boolean TrackController::setAccessory(word address, byte position, byte power,
 	message.data[4] = position;
 	message.data[5] = power;
 
-	exchangeMessage(&message, 1000);
+	exchangeMessage(message, message, 1000);
 
 	if (time != 0) {
 		delay(time);
 		
-		clearMessage(&message);
-
+		message.clear();
 		message.command = 0x0b;
 		message.length = 0x06;
 		message.data[2] = highByte(address);
 		message.data[3] = lowByte(address);
 		message.data[4] = position;
 
-		exchangeMessage(&message, 1000);
+		exchangeMessage(message, message, 1000);
 	}
 	
 	return true;
 }
 
 boolean TrackController::setTurnout(word address, boolean straight) {
-	return setAccessory(address, straight ? ACC_STRAIGHT : ACC_ROUND, 1, 0);
+	return setAccessory(address, straight ? ACC_STRAIGHT : ACC_ROUND, 1, 1000);
 }
 
 boolean TrackController::getLocoDirection(word address, byte *direction) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x05;
 	message.length = 0x04;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 
-	if (exchangeMessage(&message, 1000)) {
+	if (exchangeMessage(message, message, 1000)) {
 		direction[0] = message.data[4];
 		return true;
 	} else {
-		false;
+		return false;
 	}
 }
 
 boolean TrackController::getLocoSpeed(word address, word *speed) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x04;
 	message.length = 0x04;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 
-	if (exchangeMessage(&message, 1000)) {
+	if (exchangeMessage(message, message, 1000)) {
 		speed[0] = word(message.data[4], message.data[5]);
 		return true;
 	} else {
@@ -419,15 +588,14 @@ boolean TrackController::getLocoFunction(word address, byte function,
 		byte *power) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x06;
 	message.length = 0x05;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 	message.data[4] = function;
 
-	if (exchangeMessage(&message, 1000)) {
+	if (exchangeMessage(message, message, 1000)) {
 		power[0] = message.data[5];
 		return true;
 	} else {
@@ -438,14 +606,13 @@ boolean TrackController::getLocoFunction(word address, byte function,
 boolean TrackController::getAccessory(word address, byte *position, byte *power) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x0b;
 	message.length = 0x04;
 	message.data[2] = highByte(address);
 	message.data[3] = lowByte(address);
 
-	if (exchangeMessage(&message, 1000)) {
+	if (exchangeMessage(message, message, 1000)) {
 		position[0] = message.data[4];
 		power[0] = message.data[5];
 		return true;
@@ -457,8 +624,7 @@ boolean TrackController::getAccessory(word address, byte *position, byte *power)
 boolean TrackController::writeConfig(word address, word number, byte value) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x08;
 	message.length = 0x08;
 	message.data[2] = highByte(address);
@@ -467,14 +633,13 @@ boolean TrackController::writeConfig(word address, word number, byte value) {
 	message.data[5] = lowByte(number);
 	message.data[6] = value;
 
-	return exchangeMessage(&message, 5000);
+	return exchangeMessage(message, message, 10000);
 }
 
 boolean TrackController::readConfig(word address, word number, byte *value) {
 	TrackMessage message;
 
-	clearMessage(&message);
-
+	message.clear();
 	message.command = 0x07;
 	message.length = 0x07;
 	message.data[2] = highByte(address);
@@ -483,7 +648,7 @@ boolean TrackController::readConfig(word address, word number, byte *value) {
 	message.data[5] = lowByte(number);
 	message.data[6] = 0x01;
 
-	if (exchangeMessage(&message, 5000)) {
+	if (exchangeMessage(message, message, 10000)) {
 		value[0] = message.data[6];
 		return true;
 	} else {
@@ -511,9 +676,7 @@ boolean TrackController::readConfig(word address, word number, byte *value) {
 
 static word locoBits[] = { ADDR_LOCO_1, ADDR_LOCO_2, ADDR_LOCO_3, ADDR_LOCO_4 };
 
-TrackControllerInfrared::TrackControllerInfrared(bool debug) {
-	mDebug = debug;
-	
+TrackControllerInfrared::TrackControllerInfrared() {
 	mPower = true;
 	
 	for (int i = 0; i < 2; i++) {
@@ -532,7 +695,6 @@ boolean TrackControllerInfrared::sendMessage(word address, word command) {
 		if (command >= 0x40) {
 			sendRC5(mToggle | transmission, 12, true);
 		} else {
-			int command = (address << 6) | (command & 0x3f);
 			sendRC5(mToggle | transmission, 12, false);
 		}
 		

@@ -15,33 +15,40 @@
  */
 
 #include <Railuino.h>
+#include <SoftwareSerial.h>
 
-const word PING = 1;
-const word PONG = 2;
+TrackController ctrl(0xdf24, false);
 
-TrackReporter rprt(16);
+SoftwareSerial blue(10, 11);
+
+TrackMessage message;
+
+char buffer[32];
+
+int length;
 
 void setup() {
-  Serial.begin(115200);
-}
-
-void waitForContact(int i) {
-  rprt.refresh();
-  
-  while (!rprt.getValue(i)) {
-    rprt.refresh();
-  }
-
-  while (rprt.getValue(i)) {
-    rprt.refresh();
-  }
+  ctrl.begin();
 }
 
 void loop() {
-  waitForContact(PING);
-  Serial.println("Ping");
-
-  waitForContact(PONG);
-  Serial.println("Pong");
+  if (ctrl.receiveMessage(message)) {
+    blue.println(message);
+  }
+  
+  if (blue.available()) {
+    char c = blue.read();
+    
+    if (c == 10 || length == sizeof(buffer)) {
+      String s = String(buffer);
+      length = 0;
+      if (message.parseFrom(s)) {
+        ctrl.sendMessage(message);
+      }
+    } else if (c >= 32) {
+      buffer[length++] = c;
+    }
+  }
+  
 }
 
