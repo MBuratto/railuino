@@ -3,10 +3,10 @@
  *
  * Copyright (C) 2012 Joerg Pleumann
  * 
- * This library is free software; you can redistribute it and/or
- * modify it under the terms of the GNU Lesser General Public
- * License as published by the Free Software Foundation; either
- * version 2.1 of the License, or (at your option) any later version.
+ * This example is free software; you can redistribute it and/or
+ * modify it under the terms of the Creative Commons Zero License,
+ * version 1.0, as published by the Creative Commons Organisation.
+ * This effectively puts the file into the public domain.
  *
  * This library is distributed in the hope that it will be useful,
  * but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -72,7 +72,8 @@ void setup() {
   Serial.println();
   Serial.println(F("Press <Return> to start Railuino test suite..."));
   while(true) {
-    if (Serial.read() == 10) {
+    int c = Serial.read();
+    if (c == 10 ||Êc == 13) {
       break;
     }
   }
