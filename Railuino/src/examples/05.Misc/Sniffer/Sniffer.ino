@@ -4,8 +4,8 @@
  * Copyright (C) 2012 Joerg Pleumann
  * 
  * This example is free software; you can redistribute it and/or
- * modify it under the terms of the Creative Commons Zero License
- * as published by the Creative Commons Organisation, version 1.0.
+ * modify it under the terms of the Creative Commons Zero License,
+ * version 1.0, as published by the Creative Commons Organisation.
  * This effectively puts the file into the public domain.
  *
  * This example is distributed in the hope that it will be useful,

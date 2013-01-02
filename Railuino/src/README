@@ -42,7 +42,8 @@ examples except the test suite are licensed under the Creative
 Commons Zero license, which effectively makes them public domain.
 The test suite is also licensed under the LGPL.
 
-Railuino uses parts of two other external libraries:
+Railuino uses parts of two other libraries, both of which are
+very much recommended:
 
 1) The CAN controller code is based on Fabian Greif's CANlib,
    which is (c) 2007-2012 Fabian Greif and licensed under a
