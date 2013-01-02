@@ -16,7 +16,7 @@
 
 #include <Railuino.h>
 
-const word    LOCO  = ADDR_DCC + 21;
+const word    LOCO  = ADDR_MM2 + 78;
 const word    TURN  = ADDR_ACC_MM2 + 1;
 const boolean DEBUG = true;
 

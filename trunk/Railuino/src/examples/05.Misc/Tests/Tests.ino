@@ -22,8 +22,8 @@
 // Controls whether stress tests are included
 #define STRESS true
 
-// Locomotive that is being used during the tests
-#define LOCO ADDR_DCC + 21
+// Locomotive that is being used during the tests (DCC required for reading CVs)
+#define LOCO ADDR_MM2 + 78
 
 // Turnout that is being used during the tests
 #define TURN ADDR_ACC_MM2 + 1
@@ -73,7 +73,7 @@ void setup() {
   Serial.println(F("Press <Return> to start Railuino test suite..."));
   while(true) {
     int c = Serial.read();
-    if (c == 10 ||Êc == 13) {
+    if (c == 10) {
       break;
     }
   }
