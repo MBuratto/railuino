@@ -835,7 +835,19 @@ boolean TrackReporterS88::getValue(int index) {
 // === TrackReporterIOX ==============================================
 // ===================================================================
 
-byte spiTransfer(byte _data) {
+
+void SPI_begin() {
+  digitalWrite(SS, HIGH);
+  pinMode(SS, OUTPUT);
+
+  SPCR |= _BV(MSTR);
+  SPCR |= _BV(SPE);
+
+  pinMode(SCK, OUTPUT);
+  pinMode(MOSI, OUTPUT);
+}
+
+byte SPI_transfer(byte _data) {
   SPDR = _data;
   while (!(SPSR & _BV(SPIF)))
     ;
@@ -846,12 +858,14 @@ byte ioxCount;
 
 byte ioxSwitches[16];
 
+byte ioxSwitches2[16];
+
 unsigned int readRegister(byte address, byte index) {
   digitalWrite(6, LOW);
 
-  spiTransfer(65 | (address << 1));
-  spiTransfer(index);
-  unsigned int result = spiTransfer(255);
+  SPI_transfer(65 | (address << 1));
+  SPI_transfer(index);
+  unsigned int result = SPI_transfer(255);
 
   digitalWrite(6, HIGH);
 
@@ -861,9 +875,9 @@ unsigned int readRegister(byte address, byte index) {
 void writeRegister(byte address, byte index, byte value) {
   digitalWrite(6, LOW);
 
-  spiTransfer(64 | (address << 1));
-  spiTransfer(index);
-  spiTransfer(value);
+  SPI_transfer(64 | (address << 1));
+  SPI_transfer(index);
+  SPI_transfer(value);
 
   digitalWrite(6, HIGH);
 }
@@ -872,8 +886,11 @@ void handleInterrupt0() {
   noInterrupts();
 
   for (int i = 0; i < ioxCount; i++) {
-    ioxSwitches[2 * i] |= readRegister(i, 9);
-    ioxSwitches[2 * i + 1] |= readRegister(16 + i, 9);
+    ioxSwitches[2 * i] = readRegister(i, 9);
+    ioxSwitches[2 * i + 1] = readRegister(16 + i, 9);
+    
+    ioxSwitches2[2 * i] |= ioxSwitches[2 * i];
+    ioxSwitches2[2 * i + 1] |= ioxSwitches[2 * i + 1];
   }
 
   interrupts();
@@ -884,18 +901,14 @@ TrackReporterIOX::TrackReporterIOX(int modules) {
 
   ioxCount = modules;
 
-  pinMode(6, OUTPUT);
-  pinMode(11, OUTPUT);
-  pinMode(12, INPUT);
-  pinMode(13, OUTPUT);
   digitalWrite(6, HIGH);
-
-  SPCR |= _BV(MSTR);
-  SPCR |= _BV(SPE);
-
+  pinMode(6, OUTPUT);
+  
+  SPI_begin();
+  
   noInterrupts();
   for (int i = 0; i < mCount; i++) {
-    writeRegister(i, 5, 12);   // Open drain, banks in case of 16 bit
+    writeRegister(i, 5, 76);   // Open drain, banks in case of 16 bit
 
     for (int j = 0; j <= 16; j += 16) {
       writeRegister(i, j + 0, 255); // IODIR: All GPIOs are inputs
@@ -920,8 +933,8 @@ void TrackReporterIOX::refresh() {
   noInterrupts();
 
   for (int i = 0; i < mCount; i++) {
-    mSwitches[i] = ioxSwitches[i];
-    ioxSwitches[i] = 0;
+    mSwitches[i] = ioxSwitches2[i];
+    ioxSwitches2[i] = ioxSwitches[i];
   }
 
   interrupts();
