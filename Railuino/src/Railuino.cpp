@@ -765,7 +765,7 @@ boolean TrackControllerInfrared::setTurnout(int turnout, boolean through) {
 }
 
 // ===================================================================
-// === TrackReporter =================================================
+// === TrackReporterS88 ==============================================
 // ===================================================================
 
 const int DATA = A0;
@@ -775,8 +775,8 @@ const int RESET = 4;
 
 const int TIME = 50;
 
-TrackReporter::TrackReporter(int size) {
-	mSize = size;
+TrackReporterS88::TrackReporterS88(int modules) {
+	mSize = modules;
 	
 	// pinMode(DATA, INPUT);
 	pinMode(CLOCK, OUTPUT);
@@ -784,7 +784,7 @@ TrackReporter::TrackReporter(int size) {
 	pinMode(RESET, OUTPUT);
 }
 
-void TrackReporter::refresh() {
+void TrackReporterS88::refresh() {
 	int myByte = 0;
 	int myBit = 0;
 
@@ -809,7 +809,7 @@ void TrackReporter::refresh() {
 	bitWrite(mSwitches[myByte], myBit++, digitalRead(DATA));
 	delayMicroseconds(TIME / 2);
 
-	for (int i = 1; i < mSize; i++) {
+	for (int i = 1; i < 16 * mSize; i++) {
 		digitalWrite(CLOCK, HIGH);
 		delayMicroseconds(TIME);
 		digitalWrite(CLOCK, LOW);
@@ -826,7 +826,108 @@ void TrackReporter::refresh() {
 	}
 }
 
-boolean TrackReporter::getValue(int index) {
+boolean TrackReporterS88::getValue(int index) {
 	index--;
 	return bitRead(mSwitches[index / 8], index % 8);
+}
+
+// ===================================================================
+// === TrackReporterIOX ==============================================
+// ===================================================================
+
+byte spiTransfer(byte _data) {
+  SPDR = _data;
+  while (!(SPSR & _BV(SPIF)))
+    ;
+  return SPDR;
+}
+
+byte ioxCount;
+
+byte ioxSwitches[16];
+
+unsigned int readRegister(byte address, byte index) {
+  digitalWrite(6, LOW);
+
+  spiTransfer(65 | (address << 1));
+  spiTransfer(index);
+  unsigned int result = spiTransfer(255);
+
+  digitalWrite(6, HIGH);
+
+  return result;
+}
+
+void writeRegister(byte address, byte index, byte value) {
+  digitalWrite(6, LOW);
+
+  spiTransfer(64 | (address << 1));
+  spiTransfer(index);
+  spiTransfer(value);
+
+  digitalWrite(6, HIGH);
+}
+
+void handleInterrupt0() {
+  noInterrupts();
+
+  for (int i = 0; i < ioxCount; i++) {
+    ioxSwitches[2 * i] |= readRegister(i, 9);
+    ioxSwitches[2 * i + 1] |= readRegister(16 + i, 9);
+  }
+
+  interrupts();
+}
+
+TrackReporterIOX::TrackReporterIOX(int modules) {
+  mCount = modules;
+
+  ioxCount = modules;
+
+  pinMode(6, OUTPUT);
+  pinMode(11, OUTPUT);
+  pinMode(12, INPUT);
+  pinMode(13, OUTPUT);
+  digitalWrite(6, HIGH);
+
+  SPCR |= _BV(MSTR);
+  SPCR |= _BV(SPE);
+
+  noInterrupts();
+  for (int i = 0; i < mCount; i++) {
+    writeRegister(i, 5, 12);   // Open drain, banks in case of 16 bit
+
+    for (int j = 0; j <= 16; j += 16) {
+      writeRegister(i, j + 0, 255); // IODIR: All GPIOs are inputs
+      writeRegister(i, j + 1, 255); // IOPOL: GND means locial 1
+      writeRegister(i, j + 2, 255); // GPINTEN: All interrupts enabled 
+      writeRegister(i, j + 3, 0);   // DEFVAL: Compare default value
+      //writeRegister(i, j + 4, 255); // INTCON: Compare against default value
+      writeRegister(i, j + 6, 255); // Pull-up resistors
+      readRegister(i, j + 9);
+    }
+  }
+
+  attachInterrupt(1, &handleInterrupt0, LOW);
+  interrupts();
+}
+
+TrackReporterIOX::~TrackReporterIOX() {
+  detachInterrupt(1);
+}
+
+void TrackReporterIOX::refresh() {
+  noInterrupts();
+
+  for (int i = 0; i < mCount; i++) {
+    mSwitches[i] = ioxSwitches[i];
+    ioxSwitches[i] = 0;
+  }
+
+  interrupts();
+}
+
+boolean TrackReporterIOX::getValue(int index) {
+  index--;
+  return bitRead(mSwitches[index / 8], index % 8);
 }
