@@ -24,7 +24,7 @@ const boolean DEBUG = true;
 
 TrackController ctrl(0xdf24, DEBUG);
 
-TrackReporter rprt(3);
+TrackReporterIOX rprt(1); // Replace IOX by S88 when using S88.
 
 word track = 1;
 
