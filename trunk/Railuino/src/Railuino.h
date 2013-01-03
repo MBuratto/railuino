@@ -495,7 +495,7 @@ class TrackControllerInfrared {
 };
 
 // ===================================================================
-// === TrackReporter =================================================
+// === TrackReporterS88 ==============================================
 // ===================================================================
 
 /**
@@ -508,7 +508,7 @@ class TrackControllerInfrared {
  * The S88 standard recommends a maximum of 30 boards, so we should be
  * on the safe side.
  */
-class TrackReporter {
+class TrackReporterS88 {
 
   private:
 
@@ -525,12 +525,14 @@ class TrackReporter {
   public:
 
   /**
-   * Creates a new TrackReporter with the given number of contacts.
-   * While this can be safely set to the maximum of 512, it makes
-   * sense to specify the actual number, since this speeds up
-   * reporting.
+   * Creates a new TrackReporter with the given number of modules
+   * being attached. While this value can be safely set to the
+   * maximum of 32, it makes sense to specify the actual number,
+   * since this speeds up reporting. The method assumes 16 bit
+   * modules. If you use 8 bit modules instead (or both) you need
+   * to do the math yourself.
    */
-  TrackReporter(int size);
+  TrackReporterS88(int modules);
   
   /**
    * Reads the current state of all contacts into the TrackReporter
@@ -542,6 +544,62 @@ class TrackReporter {
   /**
    * Returns the state of an individual contact. Valid index values
    * are 1 to 512.
+   */
+  boolean getValue(int index);
+
+};
+
+// ===================================================================
+// === TrackReporterIOX ==============================================
+// ===================================================================
+
+/**
+ * Implements a low-cost track reporting mechanism based on I/O
+ * expanders. Currently the MCP 23S08 and MCP 23S17 are supported,
+ * with the MCP 23S08 being treaded just like the 16 bit module, so
+ * the upper 8 bits are undefined. The IO expanders are connected via
+ * SPI. Pin x is being used for chip select. The interrupt line must
+ * be connected to Arduino pin 3 (interrupt 1) and pulled up via a
+ * resistor. Multiple expanders can be combined, assuming they are
+ * configured to different addresses via the hardware pins. All need
+ * to share the interrupt line, which is configured for open drain.
+ */
+class TrackReporterIOX {
+
+private:
+
+  /**
+   * The number of IO expanders being used.
+   */
+  int mCount;
+
+  /**
+   * The most recent contact values we know.
+   */ 
+  byte mSwitches[16];
+
+public:
+
+  /**
+   * Creates a new TrackReporter with the given number of expanders.
+   */
+  TrackReporterIOX(int modules);
+  
+  /**
+   * Is called when a TrackReporter is being destroyed. Does the
+   * necessary cleanup. No need to call this manually.
+   */
+  ~TrackReporterIOX();
+
+  /**
+   * Reads the current state of all expanders into the TrackReporter.
+   * Call this method periodically to have up-to-date values.
+   */
+  void refresh();
+
+  /**
+   * Returns the state of an individual contact. Note counting starts
+   * from 1 in order to stay compatible with the S88 reporter.
    */
   boolean getValue(int index);
 
