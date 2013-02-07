@@ -39,6 +39,12 @@
 // ===================================================================
 
 /**
+ * Version of Railuino library and required connection box software.
+ */
+#define RAILUINO_VERSION 0x003B // 0.59
+#define TRACKBOX_VERSION 0x0127 // 1.39
+
+/**
  * Constants for protocol base addresses.
  */
 #define ADDR_MM2     0x0000 // MM2 locomotive
@@ -417,6 +423,11 @@ class TrackController {
      * given value.
      */
     boolean readConfig(word address, word number, byte *value);
+    
+    /**
+     * Queries the software version of the track format processor.
+     */
+    boolean getVersion(byte *high, byte *low); 
 
 };
 
