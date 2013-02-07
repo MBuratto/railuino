@@ -70,10 +70,14 @@ void setup() {
   Serial.println();
   Serial.println();
   Serial.println();
-  Serial.println(F("Press <Return> to start Railuino test suite..."));
+  Serial.print(F("Press <Return> to start Railuino "));
+  Serial.print(RAILUINO_VERSION >> 8);
+  Serial.print(F("."));
+  Serial.print(RAILUINO_VERSION & 0xff);
+  Serial.println(F(" test suite..."));
   while(true) {
     int c = Serial.read();
-    if (c == 10) {
+    if (c == 10 || c == 13) {
       break;
     }
   }
@@ -88,6 +92,7 @@ void setup() {
   testSendReceiveMessage();
   testExchangeMessage();
   
+  testVersion();
   testPower();
   testGetSetDirection();
   testToggleDirection();
@@ -527,6 +532,31 @@ void testExchangeMessageStress() {
   PASS;
 }
 
+// Tests the version
+void testVersion() {
+  TEST;
+
+  TrackController ctrl;
+
+  ctrl.init(0, DEBUG, false);  
+  ctrl.begin();
+  
+  byte high, low;
+  
+  ASSERT(0, ctrl.getVersion(&high, &low));
+  
+  Serial.print("### Trackbox SW version is ");
+  Serial.print(high, DEC);
+  Serial.print(".");
+  Serial.println(low, DEC);
+  
+  ASSERT(1, (word)(high << 8 | low) >= (word)TRACKBOX_VERSION);
+  
+  ctrl.end();
+  
+  PASS;
+}
+
 // Tests controlling the power
 void testPower() {
   TEST;
@@ -866,4 +896,3 @@ void testReadWriteConfig() {
   
   PASS;
 }
-

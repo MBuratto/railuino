@@ -656,6 +656,29 @@ boolean TrackController::readConfig(word address, word number, byte *value) {
 	}
 }
 
+boolean TrackController::getVersion(byte *high, byte *low) {
+    boolean result = false;
+
+    TrackMessage message;
+    
+    message.clear();
+    message.command = 0x18;
+
+    sendMessage(message);
+
+    delay(500);
+
+    while(receiveMessage(message)) {
+        if (message.command = 0x18 && message.data[6] == 0x00 && message.data[7] == 0x10) {
+            (*high) = message.data[4];
+            (*low) = message.data[5];
+            result = true;
+        }
+    }
+    
+    return result;
+}
+
 // ===================================================================
 // === TrackControllerInfrared =======================================
 // ===================================================================
