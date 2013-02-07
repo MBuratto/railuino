@@ -1,4 +1,4 @@
-/*********************************************************************
+ /*********************************************************************
  * Railuino - Hacking your Märklin
  *
  * Copyright (C) 2012 Joerg Pleumann
@@ -38,7 +38,7 @@ int input(String message, int low, int high) {
       if (Serial.available() > 0) {
         int c = Serial.read();
         
-        if (c == 10) {
+        if ((c == 10 || c == 13) && result > 0) {
           if (result >= low && result <= high) {
             Serial.println();
             Serial.print(">> ");
@@ -47,18 +47,13 @@ int input(String message, int low, int high) {
           } else {
             break;
           }
-        } else if (c == 13) {
-          // Ignore
         } else if (c >= '0' && c <= '9') {
           result = result * 10 + (c - '0');
         } else {
-          result = -1;
+          result = 0;
         }
       }
     }
-    
-    Serial.println();
-    Serial.println("Invalid input");
   }
 }
 
