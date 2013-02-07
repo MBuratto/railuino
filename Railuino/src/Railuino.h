@@ -21,6 +21,20 @@
 #include <Printable.h>
 
 // ===================================================================
+// === Board detection ===============================================
+// ===================================================================
+
+#if defined(__AVR_ATmega328P__)
+#define __UNO__ 1
+#define __BOARD__ "Arduino Uno"
+#elif defined(__AVR_ATmega32U4__)
+#define __LEONARDO__ 1
+#define __BOARD__ "Arduino Leonardo"
+#else
+#error Unsupported board. Please adjust library.
+#endif
+
+// ===================================================================
 // === Common definitions ============================================
 // ===================================================================
 

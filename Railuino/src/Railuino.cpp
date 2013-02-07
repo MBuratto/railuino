@@ -217,7 +217,7 @@ boolean TrackController::isLoopback() {
 }
 
 void TrackController::begin() {
-	attachInterrupt(0, enqueue, LOW);
+	attachInterrupt(CAN_INT, enqueue, LOW);
 
 	if (!can_init(5, mLoopback)) {
 		Serial.println(F("!!! Init error"));
@@ -281,7 +281,7 @@ void TrackController::generateHash() {
 // end - no interrupts
 
 void TrackController::end() {
-	detachInterrupt(0);
+	detachInterrupt(CAN_INT);
 
 	can_t t;
 
