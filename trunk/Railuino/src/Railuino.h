@@ -460,7 +460,7 @@ class TrackControllerInfrared {
 
 	/**
 	 * Creates a new TrackControllerInfrared and does some
-	 * initializing.
+	 * initializing. Assumes the IR LED is on pin 9.
 	 */
     TrackControllerInfrared();
 
