@@ -23,6 +23,7 @@ TrackReporterIOX rprt(1); // Replace IOX by S88 when using S88.
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
 }
 
 void waitForContact(int i) {

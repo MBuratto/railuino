@@ -29,6 +29,7 @@ word track = 1;
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
 
   ctrl.begin();
   ctrl.setPower(true);

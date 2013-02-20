@@ -30,6 +30,8 @@ const int FIRE  = A4;
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
+  
   ctrl.begin();
   
   digitalWrite(A1, HIGH);

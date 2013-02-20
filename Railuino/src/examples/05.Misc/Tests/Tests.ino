@@ -67,6 +67,8 @@ boolean __ASSERT__(int assertNo, boolean exprValue, const char funcName[]) {
 void setup() {
   Serial.begin(115200);
   
+  while (!Serial);
+  
   Serial.println();
   Serial.println();
   Serial.println();
