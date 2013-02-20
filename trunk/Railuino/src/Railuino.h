@@ -41,7 +41,7 @@
 /**
  * Version of Railuino library and required connection box software.
  */
-#define RAILUINO_VERSION 0x003B // 0.59
+#define RAILUINO_VERSION 0x0100 // 1.00
 #define TRACKBOX_VERSION 0x0127 // 1.39
 
 /**
