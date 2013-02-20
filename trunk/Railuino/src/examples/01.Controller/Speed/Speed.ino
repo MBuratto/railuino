@@ -25,6 +25,8 @@ TrackController ctrl(0xdf24, DEBUG);
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
+  
   ctrl.begin();
   
   Serial.println("Power on");

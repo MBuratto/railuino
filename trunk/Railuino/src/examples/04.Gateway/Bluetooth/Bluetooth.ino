@@ -33,6 +33,8 @@ boolean result;
 
 void setup() {
   Serial.begin(115200);
+  while (!Serial);
+  
   ctrl.begin();
   blue.begin(9600);
   // Serial.println("100 Ready");
