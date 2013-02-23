@@ -19,7 +19,12 @@
 // #include "canbus/canbus.c"
 #include "can/mcp2515.h"
 #include "can/mcp2515.c"
+
+#if defined(__LEONARDO__)
+#include "ir/infrared2.c"
+#else
 #include "ir/infrared.c"
+#endif
 
 size_t printHex(Print &p, unsigned long hex, int digits) {
     size_t size = 0;
