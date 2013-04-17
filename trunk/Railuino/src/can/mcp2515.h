@@ -71,7 +71,7 @@ uint8_t can_read_status(uint8_t type);
 
 // ----------------------------------------------------------------------------
 
-uint8_t can_init(uint8_t speed);
+uint8_t can_init(uint8_t speed, bool loopback);
 
 // ----------------------------------------------------------------------------
 // check if there are any new messages waiting
