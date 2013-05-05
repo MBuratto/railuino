@@ -16,7 +16,7 @@
  
 #include <Railuino.h>
 
-const word    LOCO  = ADDR_MM2 + 78;
+const word    LOCO  = ADDR_DCC + 21; // Reading CVs requires DCC to work 
 const boolean DEBUG = true;
 
 TrackController ctrl(0xdf24, DEBUG);
