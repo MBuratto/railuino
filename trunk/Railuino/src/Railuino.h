@@ -30,6 +30,9 @@
 #elif defined(__AVR_ATmega32U4__)
 #define __LEONARDO__ 1
 #define __BOARD__ "Arduino Leonardo"
+#elif defined(__AVR_ATmega2560__)
+#define __MEGA__ 1
+#define __BOARD__ "Arduino Mega"
 #else
 #error Unsupported board. Please adjust library.
 #endif

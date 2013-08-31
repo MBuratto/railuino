@@ -1,6 +1,6 @@
-Railuino - Hacking your Märklin
+Railuino - Hacking your Maerklin
 
-This library allows you to control your digital Märklin railway
+This library allows you to control your digital Maerklin railway
 using Arduino. It can be used in two flavors:
 
 (1) As a Mobile Station 2. You can use a Sparkfun CAN shield and a

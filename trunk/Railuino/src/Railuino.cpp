@@ -222,11 +222,17 @@ boolean TrackController::isLoopback() {
 }
 
 void TrackController::begin() {
+    // Even if we don't use the real SS pin
+    // on all boards, it must be set to out,
+    // otherwise SPI might switch to slave
+    // and we just hang. Do not delete!
+    pinMode(SS, OUTPUT);
+
 	attachInterrupt(CAN_INT, enqueue, LOW);
 
 	if (!can_init(5, mLoopback)) {
-		Serial.println(F("!!! Init error"));
-		Serial.println(F("!!! Emergency stop"));
+		Serial.println(F("!?! Init error"));
+		Serial.println(F("!?! Emergency stop"));
 		for (;;);
 	}
 
@@ -372,8 +378,8 @@ boolean TrackController::exchangeMessage(TrackMessage &out, TrackMessage &in, wo
 
 	if (!sendMessage(out)) {
 		if (mDebug) {
-			Serial.println(F("!!! Send error"));
-			Serial.println(F("!!! Emergency stop"));
+			Serial.println(F("!?! Send error"));
+			Serial.println(F("!?! Emergency stop"));
 			setPower(false);
 			for (;;);
 		}
@@ -393,7 +399,7 @@ boolean TrackController::exchangeMessage(TrackMessage &out, TrackMessage &in, wo
 	}
 
 	if (mDebug) {
-		Serial.println(F("!!! Receive timeout"));
+		Serial.println(F("!?! Receive timeout"));
 	}
 	
 	return false;

@@ -28,6 +28,20 @@
 
 #define CAN_INT  1
 
+#elif defined(__MEGA__)
+
+#define	P_MOSI	B,2
+#define	P_MISO	B,3
+#define	P_SCK	B,1
+
+//#define	MCP2515_CS			D,3	// Rev A
+#define	MCP2515_CS			B,4 // was 2 Rev B
+#define	MCP2515_INT			E,4 // was 2
+#define LED2_HIGH			B,0
+#define LED2_LOW			B,0
+
+#define CAN_INT  0
+
 #endif
 
 #endif	// DEFAULTS_H
