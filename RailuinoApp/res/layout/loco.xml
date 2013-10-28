@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="10dp"
+    android:orientation="vertical" >
+
+    <EditText
+        android:id="@+id/labelField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:hint="@string/label"
+        android:inputType="text"
+        android:text=""
+        android:textAppearance="@android:style/TextAppearance.Large" />
+
+    <Spinner
+        android:id="@+id/typeSpinner"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:dropDownSelector="@layout/spinner"
+         />
+
+    <EditText
+        android:id="@+id/addressField"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="10dp"
+        android:hint="@string/address"
+        android:inputType="number"
+        android:text=""
+        android:textAppearance="@android:style/TextAppearance.Large" />
+
+</LinearLayout>

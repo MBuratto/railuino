@@ -1,0 +1,45 @@
+<resources>
+
+    <string name="app_name">Railuino</string>
+    <string name="hello_world">Hello world!</string>
+    <string name="menu_settings">Settings</string>
+    <string name="title_activity_main">Railuino</string>
+
+    <string name="mm2">MM2-Protokoll</string>
+    <string name="dcc">DCC-Protokoll</string>
+    <string name="mfx">MFX-Protokoll</string>
+    
+    <string name="label">Bezeichnung</string>
+    <string name="address">Adresse</string>
+    
+    <string name="newLoco">(Neue Lokomotive)</string>
+    <string name="newAccy">(Neues Schaltpult)</string>
+    
+    <string name="edit_loco">Lokomotive bearbeiten</string>
+    <string name="edit_accy">Schaltpult bearbeiten</string>
+    
+    <string name="delete_loco_title">Lokomotive löschen</string>
+    <string name="delete_loco_message">Sind Sie sicher? Dies kann nicht rückgängig gemacht werden.</string>
+
+    <string name="delete_accy_title">Schaltpult löschen</string>
+    <string name="delete_accy_message">Sind Sie sicher? Dies kann nicht rückgängig gemacht werden.</string>
+    
+    <string name="untitled">Unbenannt</string>
+
+    <string name="voice_direction">Richtung</string>
+    <string name="voice_forward">Vorwärts</string>
+    <string name="voice_backward">Rückwärts</string>
+    
+    <string name="voice_stop">Anhalten</string>
+    <string name="voice_faster">Schneller</string>
+    <string name="voice_slower">Langsamer</string>
+    <string name="voice_low_speed">Langsame Fahrt</string>
+    <string name="voice_half_speed">Halbe Fahrt</string>
+    <string name="voice_high_speed">Schnelle Fahrt</string>
+    <string name="voice_full_speed">Volle Fahrt</string>
+
+    <string name="voice_lights">Licht</string>
+    <string name="voice_function">Funktion</string>
+    <string name="voice_turnout">Weiche</string>
+    
+</resources>
