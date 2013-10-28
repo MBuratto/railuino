@@ -1,0 +1,277 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_margin="20dp"
+    android:stretchColumns="*" >
+
+    <TableRow
+        android:id="@+id/tableRow1"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <Spinner
+            android:id="@+id/locoSpinner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_span="4" />
+
+        <ImageButton
+            android:id="@+id/locoConfigButton"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/settings" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow2"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:paddingBottom="20dp"
+        android:paddingTop="30dp" >
+
+        <ImageView
+            android:id="@+id/locoImage"
+            android:layout_width="720px"
+            android:layout_height="240px"
+            android:layout_gravity="center_horizontal"
+            android:layout_span="5"
+            android:scaleType="centerInside"
+            android:src="@drawable/help" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow3"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <SeekBar
+            android:id="@+id/locoSpeedBar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_span="5"
+            android:max="1000"
+            android:paddingBottom="20dp"
+            android:paddingTop="10dp" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow4"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ImageButton
+            android:id="@+id/locoSlowerButton"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/down" />
+
+        <ImageButton
+            android:id="@+id/locoDirectButton"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:layout_span="3"
+            android:src="@drawable/forward" />
+
+        <ImageButton
+            android:id="@+id/locoFasterButton"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/up" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow5"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ToggleButton
+            android:id="@+id/locoF0Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F0"
+            android:textOff="F0"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF1Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F1"
+            android:textOff="F1"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF2Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F2"
+            android:textOff="F2"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF3Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F3"
+            android:textOff="F3"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF4Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F4"
+            android:textOff="F4"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow6"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ToggleButton
+            android:id="@+id/locoF5Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F5"
+            android:textOff="F5"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF6Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F6"
+            android:textOff="F6"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF7Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F7"
+            android:textOff="F7"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF8Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F8"
+            android:textOff="F8"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+
+        <ToggleButton
+            android:id="@+id/locoF9Button"
+            android:layout_width="120px"
+            android:layout_height="86px"
+            android:textOn="F9"
+            android:textOff="F9"
+            android:textAppearance="@android:style/TextAppearance.Large"
+            android:src="@drawable/ic_launcher" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow7"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp" >
+
+        <Spinner
+            android:id="@+id/accySpinner"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_span="4" />
+
+        <ImageButton
+            android:id="@+id/accyConfigButton"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/settings" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow8"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="20dp" >
+
+        <ImageButton
+            android:id="@+id/accy0Button"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy1Button"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy2Button"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy3Button"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy4Button"
+            android:layout_width="120px"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+    </TableRow>
+
+    <TableRow
+        android:id="@+id/tableRow9"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" >
+
+        <ImageButton
+            android:id="@+id/accy5Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy6Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy7Button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy8Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+
+        <ImageButton
+            android:id="@+id/accy9Button"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:src="@drawable/turn_round" />
+    </TableRow>
+
+</TableLayout>
