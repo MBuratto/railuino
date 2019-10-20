@@ -53,7 +53,7 @@ int parseHex(String &s, int start, int end, boolean *ok) {
         } else if (c >= 'A' && c <= 'F') {
             value = 16 * value + 10 + c - 'A';
         } else {
-        	ok = false;
+        	*ok = false;
             return -1;
         }
     }
